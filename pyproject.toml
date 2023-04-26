@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "streamlit-session-memo"
+version = "0.1.0"
+description = ""
+authors = ["Yuichiro Tachibana (Tsuchiya) <t.yic.yt@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "streamlit_session_memo"}]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+streamlit = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
