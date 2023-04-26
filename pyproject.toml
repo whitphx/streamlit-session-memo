@@ -8,11 +8,17 @@ readme = "README.md"
 packages = [{include = "streamlit_session_memo"}]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = ">=3.8,<3.12,!=3.9.7"  # 3.9.7 is excluded due to https://github.com/streamlit/streamlit/pull/5168
 streamlit = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
+numpy = "^1.21.0"
+pandas = [
+  {version = "1.1.5", python = ">=3.7,<3.8"},
+  {version = "^1.4.0", python = ">=3.8,<3.11"},
+]
+streamlit = "^1.13.0"
 
 [build-system]
 requires = ["poetry-core"]
