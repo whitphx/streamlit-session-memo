@@ -1,13 +1,9 @@
 name: Python package
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push]
 
 jobs:
-  build:
+  test-and-build:
 
     runs-on: ubuntu-latest
     strategy:
@@ -62,3 +58,76 @@ jobs:
     - name: Test with pytest
       run: |
         poetry run pytest
+
+    - name: Build
+      if: success() && matrix.python-version == '3.10'
+      run: poetry build
+
+    - name: Upload the built files as an artifact
+      uses: actions/upload-artifact@v3
+      if: ${{ ! startsWith(github.ref, 'refs/tags/v') && matrix.python-version == '3.10' }}
+      with:
+        path: dist
+        name: streamlit-session-memo-${{ github.sha }}.tgz
+
+    - name: Upload the built files as an artifact (when pushed with a version tag)
+      uses: actions/upload-artifact@v3
+      if: ${{ startsWith(github.ref, 'refs/tags/v') && matrix.python-version == '3.10' }}
+      with:
+        path: dist
+        name: streamlit-session-memo-${{ github.ref_name }}.tgz
+
+  publish-kernel:
+    if: ${{ !failure() && startsWith(github.ref, 'refs/tags/v') }}  # `!failure()` is necessary to avoid skipping this job after successful build: https://github.com/actions/runner/issues/491
+    needs: [test-and-build]
+
+    env:
+      python-version: "3.10"
+
+    permissions:
+      contents: write  # Necessary for creating releases: https://github.com/softprops/action-gh-release#permissions
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ env.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.python-version }}
+
+    # The following steps are based on https://github.com/python-poetry/poetry/blob/def1ee8f3ae00c307ca028da53d2347615c5c32b/.github/workflows/main.yml#L51-L84
+    - name: Get full Python version
+      id: full-python-version
+      run: echo version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))") >> $GITHUB_OUTPUT
+
+    - name: Bootstrap poetry
+      run: |
+        curl -sL https://install.python-poetry.org | python - -y
+
+    - name: Update PATH
+      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Configure poetry
+      run: poetry config virtualenvs.in-project true
+
+    - name: Set up cache
+      uses: actions/cache@v3
+      id: cache
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Ensure cache is healthy
+      if: steps.cache.outputs.cache-hit == 'true'
+      run: timeout 10s pip --version || rm -rf .venv
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: stlite-kernel-${{ github.ref_name }}.tgz
+
+    - name: Publish
+      run: poetry publish -u __token__ -p $PYPI_API_TOKEN
+      env:
+        PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
