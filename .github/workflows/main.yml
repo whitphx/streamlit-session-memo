@@ -126,6 +126,7 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: streamlit-session-memo-${{ github.ref_name }}.tgz
+        path: dist
 
     - name: Publish
       run: poetry publish -u __token__ -p $PYPI_API_TOKEN
