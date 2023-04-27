@@ -1,4 +1,4 @@
-from .session_memo import session_memo
+from .session_memo import st_session_memo
 
 
-__all__ = ["session_memo"]
+__all__ = ["st_session_memo"]

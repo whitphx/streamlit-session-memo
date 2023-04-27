@@ -13,7 +13,7 @@ def calc_cache_key(args, kwargs) -> Hashable:
     return CACHE_KEY_PREFIX, tuple(hashable_args), tuple(sorted(hashable_kwargs.items()))
 
 
-def session_memo(func):
+def st_session_memo(func):
     def inner(*args, **kwargs):
         cache_key = calc_cache_key(args, kwargs)
 
