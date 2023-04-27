@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "streamlit-session-memo"
-version = "0.3.0"
+version = "0.3.1"
 description = ""
 authors = ["Yuichiro Tachibana (Tsuchiya) <t.yic.yt@gmail.com>"]
 license = "MIT"
