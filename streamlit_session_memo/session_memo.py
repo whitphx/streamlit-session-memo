@@ -21,7 +21,7 @@ def calc_cache_key(func, args, kwargs) -> Hashable:
 
 def st_session_memo(func):
     def inner(*args, **kwargs):
-        cache_key = calc_cache_key(args, kwargs)
+        cache_key = calc_cache_key(func, args, kwargs)
 
         if cache_key in st.session_state:
             return st.session_state[cache_key]

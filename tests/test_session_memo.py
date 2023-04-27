@@ -1,8 +1,9 @@
 import typing
+from unittest.mock import patch, Mock
 
 import pytest
 
-from streamlit_session_memo.session_memo import calc_cache_key
+from streamlit_session_memo.session_memo import calc_cache_key, st_session_memo
 
 
 TEST_ARGS_LIST = [
@@ -45,3 +46,28 @@ class TestCalcCacheKey:
 
         assert calc_cache_key(foo, (object(),), {}) != calc_cache_key(foo, (object(),), {})
         assert isinstance(calc_cache_key(foo, (object(),), {}), typing.Hashable)
+
+
+@patch("streamlit_session_memo.session_memo.st")
+def test_st_session_memo(st):
+    st.session_state = {}
+
+    spy = Mock()
+
+    @st_session_memo
+    def foo(a, b):
+        spy()
+        return a + b
+
+    assert foo(1, 2) == 3
+    spy.assert_called_once()
+
+    spy.reset_mock()
+
+    assert foo(1, 2) == 3
+    spy.assert_not_called()
+
+    spy.reset_mock()
+
+    assert foo(1, 3) == 4
+    spy.assert_called_once()
