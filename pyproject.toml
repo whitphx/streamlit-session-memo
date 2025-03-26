@@ -1,25 +1,19 @@
-[tool.poetry]
+[project]
 name = "streamlit-session-memo"
 version = "0.3.1"
 description = ""
-authors = ["Yuichiro Tachibana (Tsuchiya) <t.yic.yt@gmail.com>"]
-license = "MIT"
+authors = [{ name = "Yuichiro Tachibana (Tsuchiya)", email = "t.yic.yt@gmail.com" }]
+requires-python = ">=3.9,!=3.9.7"  # 3.9.7 is excluded due to https://github.com/streamlit/streamlit/pull/5168
 readme = "README.md"
-packages = [{include = "streamlit_session_memo"}]
+license = "MIT"
+dependencies = ["streamlit>=1.0.0"]
 
-[tool.poetry.dependencies]
-python = ">=3.8,<3.12,!=3.9.7"  # 3.9.7 is excluded due to https://github.com/streamlit/streamlit/pull/5168
-streamlit = "^1.0.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.3.1"
-numpy = "^1.21.0"
-pandas = [
-  {version = "1.1.5", python = ">=3.7,<3.8"},
-  {version = "^1.4.0", python = ">=3.8,<3.11"},
+[dependency-groups]
+dev = [
+    "pytest>=7.3.1,<8",
+    "streamlit>=1.13.0",
 ]
-streamlit = "^1.13.0"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
