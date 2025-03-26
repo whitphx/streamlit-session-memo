@@ -10,6 +10,8 @@ dependencies = ["streamlit>=1.0.0"]
 
 [dependency-groups]
 dev = [
+    "ruff>=0.7.0",
+    "mypy[faster-cache]>=1.15.0",
     "pytest>=7.3.1,<8",
     "streamlit>=1.13.0",
 ]
@@ -17,3 +19,6 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.ruff.lint]
+extend-select = ["I"]
