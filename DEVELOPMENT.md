@@ -1,4 +1,4 @@
-# Development of `streamlit-fesion`
+# Development of `streamlit-session-memo`
 
 ## Set up
 * Install `uv`
