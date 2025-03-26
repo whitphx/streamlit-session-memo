@@ -1,139 +1,198 @@
 name: Python package
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ main ]
+
+permissions: {}
 
 jobs:
-  test-and-build:
-
+  test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5.4.0
       with:
         python-version: ${{ matrix.python-version }}
 
-    # The following steps are based on https://github.com/python-poetry/poetry/blob/def1ee8f3ae00c307ca028da53d2347615c5c32b/.github/workflows/main.yml#L51-L84
-    - name: Get full Python version
-      id: full-python-version
-      run: echo version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))") >> $GITHUB_OUTPUT
-
-    - name: Bootstrap poetry
-      run: |
-        curl -sL https://install.python-poetry.org | python - -y
-
-    - name: Update PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Configure poetry
-      run: poetry config virtualenvs.in-project true
-
-    - name: Set up cache
-      uses: actions/cache@v3
-      id: cache
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
-
-    - name: Ensure cache is healthy
-      if: steps.cache.outputs.cache-hit == 'true'
-      run: timeout 10s pip --version || rm -rf .venv
-
     - name: Install dependencies
-      run: poetry install
-#    - name: Lint with black, isort, and flake8
-#      run: |
-#        poetry run black . --check
-#        poetry run isort . --check --resolve-all-configs
-#        poetry run flake8
-#    - name: Type checking with mypy
-#      run: |
-#        poetry run mypy .
+      run: uv sync --all-extras --dev
+
+    - name: Run Ruff
+      run: |
+        uv run ruff check --output-format=github .
+        uv run ruff format . --check
+
+    - name: Type checking with mypy
+      run: uv run mypy .
 
     - name: Test with pytest
       run: |
-        poetry run pytest
+        uv run pytest
 
-    - name: Build
-      if: success() && matrix.python-version == '3.10'
-      run: poetry build
-
-    - name: Upload the built files as an artifact
-      uses: actions/upload-artifact@v3
-      if: ${{ ! startsWith(github.ref, 'refs/tags/v') && matrix.python-version == '3.10' }}
-      with:
-        path: dist
-        name: streamlit-session-memo-${{ github.sha }}.tgz
-
-    - name: Upload the built files as an artifact (when pushed with a version tag)
-      uses: actions/upload-artifact@v3
-      if: ${{ startsWith(github.ref, 'refs/tags/v') && matrix.python-version == '3.10' }}
-      with:
-        path: dist
-        name: streamlit-session-memo-${{ github.ref_name }}.tgz
-
-  publish:
-    if: ${{ !failure() && startsWith(github.ref, 'refs/tags/v') }}  # `!failure()` is necessary to avoid skipping this job after successful build: https://github.com/actions/runner/issues/491
-    needs: [test-and-build]
-
-    env:
-      python-version: "3.10"
-
-    permissions:
-      contents: write  # Necessary for creating releases: https://github.com/softprops/action-gh-release#permissions
-
+  build:
+    needs: [test]
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python ${{ env.python-version }}
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
       with:
-        python-version: ${{ env.python-version }}
+        persist-credentials: false
+        fetch-depth: 0  # Fetch all history for hatch-vcs to get the correct version
 
-    # The following steps are based on https://github.com/python-poetry/poetry/blob/def1ee8f3ae00c307ca028da53d2347615c5c32b/.github/workflows/main.yml#L51-L84
-    - name: Get full Python version
-      id: full-python-version
-      run: echo version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))") >> $GITHUB_OUTPUT
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
 
-    - name: Bootstrap poetry
-      run: |
-        curl -sL https://install.python-poetry.org | python - -y
-
-    - name: Update PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Configure poetry
-      run: poetry config virtualenvs.in-project true
-
-    - name: Set up cache
-      uses: actions/cache@v3
-      id: cache
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+        python-version-file: "pyproject.toml"
 
-    - name: Ensure cache is healthy
-      if: steps.cache.outputs.cache-hit == 'true'
-      run: timeout 10s pip --version || rm -rf .venv
+    - name: Install Python dependencies
+      run: uv sync --all-extras --dev
 
-    - uses: actions/download-artifact@v3
+    - name: Package
+      run: uv build
+
+    - name: Upload the built files as an artifact
+      uses: actions/upload-artifact@v4
       with:
-        name: streamlit-session-memo-${{ github.ref_name }}.tgz
+        name: streamlit-session-memo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.sha  }}
         path: dist
 
-    - name: Publish
-      run: poetry publish -u __token__ -p $PYPI_API_TOKEN
-      env:
-        PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+  deploy-preview-wheel:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    name: Deploy wheel file to Cloudflare Pages
+    outputs:
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    steps:
+      - run: mkdir -p ${{ runner.temp }}/artifacts/
 
-    - name: Create a new release
-      uses: softprops/action-gh-release@v1
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: streamlit-session-memo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.sha  }}
+          path: ${{ runner.temp }}/artifacts/streamlit-session-memo
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65
+        id: deploy
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy ${{ runner.temp }}/artifacts/streamlit-session-memo --project-name=streamlit-session-memo-preview --branch=${{ github.head_ref || github.ref_name }} --commit-hash=${{ github.sha }}
+
+      - name: Comment on the PR to inform the deployment file URLs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const deploymentUrl = '${{ steps.deploy.outputs.deployment-url }}';
+
+            // Get all files in the artifacts directory
+            const artifactsDir = '${{ runner.temp }}/artifacts/streamlit-session-memo';
+            const allFiles = fs.readdirSync(artifactsDir);
+            // Filter to include only wheel (.whl) and source distribution (.tar.gz) files
+            const files = allFiles.filter(file => file.endsWith('.whl') || file.endsWith('.tar.gz'));
+
+            // Create message with links to each file
+            let fileLinks = files.map(file => {
+              const installCommand = `pip install ${deploymentUrl}/${file}`;
+              return `- [${file}](${deploymentUrl}/${file})\n  \`\`\`bash\n  ${installCommand}\n  \`\`\``;
+            }).join('\n');
+
+            const message = `📦 Wheel files have been deployed to Cloudflare Pages:
+
+            ${fileLinks}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/streamlit-session-memo
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
       with:
-        files: dist/*
+        name: streamlit-session-memo-${{ github.ref_name }}
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+    needs:
+    - publish-to-pypi
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: streamlit-session-memo-${{ github.ref_name }}
+        path: dist/
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v3.0.0
+      with:
+        inputs: >-
+          ./dist/*.tar.gz
+          ./dist/*.whl
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: >-
+        gh release create
+        "$GITHUB_REF_NAME"
+        --repo "$GITHUB_REPOSITORY"
+        --notes ""
+    - name: Upload artifact signatures to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages, and the
+      # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        "$GITHUB_REF_NAME" dist/**
+        --repo "$GITHUB_REPOSITORY"

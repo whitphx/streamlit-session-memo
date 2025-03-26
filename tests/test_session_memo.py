@@ -1,23 +1,22 @@
 import typing
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
 from streamlit_session_memo.session_memo import calc_cache_key, st_session_memo
 
-
 TEST_ARGS_LIST = [
-        ((), {}),
-        ((None,), {}),
-        ((1,), {}),
-        (("a",), {}),
-        ((), {1: 1}),
-        ((), {1: "a"}),
-        ((), {1: None}),
-        ((), {"a": 1}),
-        ((), {"a": "b"}),
-        ((), {"a": None}),
-        ((1, 2, 3), {'a': 1, 'b': 2, 'c': 3})
+    ((), {}),
+    ((None,), {}),
+    ((1,), {}),
+    (("a",), {}),
+    ((), {1: 1}),
+    ((), {1: "a"}),
+    ((), {1: None}),
+    ((), {"a": 1}),
+    ((), {"a": "b"}),
+    ((), {"a": None}),
+    ((1, 2, 3), {"a": 1, "b": 2, "c": 3}),
 ]
 
 
@@ -44,7 +43,9 @@ class TestCalcCacheKey:
         def foo():
             pass
 
-        assert calc_cache_key(foo, (object(),), {}) != calc_cache_key(foo, (object(),), {})
+        assert calc_cache_key(foo, (object(),), {}) != calc_cache_key(
+            foo, (object(),), {}
+        )
         assert isinstance(calc_cache_key(foo, (object(),), {}), typing.Hashable)
 
 
