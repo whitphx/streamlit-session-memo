@@ -1,11 +1,11 @@
 [project]
 name = "streamlit-session-memo"
-version = "0.3.1"
 description = ""
 authors = [{ name = "Yuichiro Tachibana (Tsuchiya)", email = "t.yic.yt@gmail.com" }]
 requires-python = ">=3.9,!=3.9.7"  # 3.9.7 is excluded due to https://github.com/streamlit/streamlit/pull/5168
 readme = "README.md"
 license = "MIT"
+dynamic = ["version"]
 dependencies = ["streamlit>=1.0.0"]
 
 [dependency-groups]
@@ -17,8 +17,11 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.ruff.lint]
 extend-select = ["I"]
