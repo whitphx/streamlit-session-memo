@@ -1,6 +1,13 @@
 name: Python package
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ main ]
+
+permissions: {}
 
 jobs:
   test:
