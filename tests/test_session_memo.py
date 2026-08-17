@@ -50,6 +50,32 @@ class TestCalcCacheKey:
 
 
 @patch("streamlit_session_memo.session_memo.st")
+def test_st_session_memo_with_unhashable_arguments(st):
+    """Unhashable arguments are keyed by `id()`, and CPython reuses the address of a
+    freed object, so each cached argument must be kept alive to keep its key unique.
+    """
+    st.session_state = {}
+
+    @st_session_memo
+    def foo(config):
+        return config["name"]
+
+    # The dicts are not referenced by the caller, so a later one can be allocated at
+    # the address of an earlier one unless the cache holds on to them.
+    names = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    assert [foo({"name": name}) for name in names] == names
+
+
+def test_st_session_memo_preserves_function_metadata():
+    @st_session_memo
+    def foo(a, b):
+        """Docstring of foo."""
+
+    assert foo.__name__ == "foo"
+    assert foo.__doc__ == "Docstring of foo."
+
+
+@patch("streamlit_session_memo.session_memo.st")
 def test_st_session_memo(st):
     st.session_state = {}
 
