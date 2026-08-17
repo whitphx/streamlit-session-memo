@@ -2,6 +2,7 @@ import typing
 from unittest.mock import Mock, patch
 
 import pytest
+from streamlit.runtime.caching.cache_errors import UnhashableParamError
 
 from streamlit_session_memo.session_memo import calc_cache_key, st_session_memo
 
@@ -10,9 +11,6 @@ TEST_ARGS_LIST = [
     ((None,), {}),
     ((1,), {}),
     (("a",), {}),
-    ((), {1: 1}),
-    ((), {1: "a"}),
-    ((), {1: None}),
     ((), {"a": 1}),
     ((), {"a": "b"}),
     ((), {"a": None}),
@@ -39,31 +37,55 @@ class TestCalcCacheKey:
 
         assert calc_cache_key(foo, args, kwargs) != calc_cache_key(bar, args, kwargs)
 
-    def test_unhashable_arguments(self):
-        def foo():
+    def test_unhashable_arguments_are_keyed_by_content(self):
+        def foo(config):
             pass
 
-        assert calc_cache_key(foo, (object(),), {}) != calc_cache_key(
-            foo, (object(),), {}
+        assert calc_cache_key(foo, ({"a": 1},), {}) == calc_cache_key(
+            foo, ({"a": 1},), {}
         )
-        assert isinstance(calc_cache_key(foo, (object(),), {}), typing.Hashable)
+        assert calc_cache_key(foo, ({"a": 1},), {}) != calc_cache_key(
+            foo, ({"a": 2},), {}
+        )
+
+    def test_arguments_streamlit_cannot_hash(self):
+        def foo(config):
+            pass
+
+        with pytest.raises(UnhashableParamError):
+            calc_cache_key(foo, (object(),), {})
+
+    def test_underscore_prefixed_parameters_are_skipped(self):
+        def foo(_a, b):
+            pass
+
+        assert calc_cache_key(foo, (1, 2), {}) == calc_cache_key(foo, (9, 2), {})
+        assert calc_cache_key(foo, (1, 2), {}) != calc_cache_key(foo, (1, 9), {})
+
+    def test_positional_and_keyword_arguments_match(self):
+        def foo(a, b):
+            pass
+
+        assert calc_cache_key(foo, (1, 2), {}) == calc_cache_key(
+            foo, (), {"a": 1, "b": 2}
+        )
 
 
 @patch("streamlit_session_memo.session_memo.st")
 def test_st_session_memo_with_unhashable_arguments(st):
-    """Unhashable arguments are keyed by `id()`, and CPython reuses the address of a
-    freed object, so each cached argument must be kept alive to keep its key unique.
-    """
     st.session_state = {}
+
+    spy = Mock()
 
     @st_session_memo
     def foo(config):
+        spy()
         return config["name"]
 
-    # The dicts are not referenced by the caller, so a later one can be allocated at
-    # the address of an earlier one unless the cache holds on to them.
-    names = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    assert [foo({"name": name}) for name in names] == names
+    # Each call builds an equal but distinct dict, as a rerun of a Streamlit script
+    # would.
+    assert [foo({"name": "a"}) for _ in range(3)] == ["a", "a", "a"]
+    spy.assert_called_once()
 
 
 def test_st_session_memo_preserves_function_metadata():

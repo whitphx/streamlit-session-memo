@@ -28,4 +28,7 @@ else:
     model = result
 ```
 
+Arguments are hashed the way `st.cache_data` and `st.cache_resource` hash theirs, by delegating to Streamlit's own key builder: values such as dicts and DataFrames are keyed by content, a parameter whose name starts with an underscore is left out of the key, and an argument of a type Streamlit cannot hash raises `UnhashableParamError`.
+
 Note that, this decorator is a lightweight wrapper around `st.session_state` that acts like the code snippet above, and does not provide any additional features such as mutation guards that `st.cache_data` provides.
+Cached values live in the session state until the session ends, so there is no `ttl`, no `max_entries`, and no way to clear an entry.

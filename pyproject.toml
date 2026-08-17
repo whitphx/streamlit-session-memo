@@ -7,7 +7,9 @@ readme = "README.md"
 license = "MIT"
 dynamic = ["version"]
 dependencies = [
-    "streamlit>=1.0.0",
+    # 1.25.0 is the floor for `_make_value_key()`'s current signature, which
+    # `calc_cache_key()` calls.
+    "streamlit>=1.25.0",
     "typing-extensions>=4.0.0; python_version < '3.10'",
 ]
 
