@@ -2,6 +2,7 @@ import typing
 from unittest.mock import Mock, patch
 
 import pytest
+from streamlit.runtime.caching.cache_errors import UnhashableParamError
 
 from streamlit_session_memo.session_memo import calc_cache_key, st_session_memo
 
@@ -10,9 +11,6 @@ TEST_ARGS_LIST = [
     ((None,), {}),
     ((1,), {}),
     (("a",), {}),
-    ((), {1: 1}),
-    ((), {1: "a"}),
-    ((), {1: None}),
     ((), {"a": 1}),
     ((), {"a": "b"}),
     ((), {"a": None}),
@@ -39,14 +37,74 @@ class TestCalcCacheKey:
 
         assert calc_cache_key(foo, args, kwargs) != calc_cache_key(bar, args, kwargs)
 
-    def test_unhashable_arguments(self):
-        def foo():
+    def test_unhashable_arguments_are_keyed_by_content(self):
+        def foo(config):
             pass
 
-        assert calc_cache_key(foo, (object(),), {}) != calc_cache_key(
-            foo, (object(),), {}
+        assert calc_cache_key(foo, ({"a": 1},), {}) == calc_cache_key(
+            foo, ({"a": 1},), {}
         )
-        assert isinstance(calc_cache_key(foo, (object(),), {}), typing.Hashable)
+        assert calc_cache_key(foo, ({"a": 1},), {}) != calc_cache_key(
+            foo, ({"a": 2},), {}
+        )
+
+    def test_arguments_streamlit_cannot_hash(self):
+        def foo(config):
+            pass
+
+        with pytest.raises(UnhashableParamError):
+            calc_cache_key(foo, (object(),), {})
+
+    def test_underscore_prefixed_parameters_are_skipped(self):
+        def foo(_a, b):
+            pass
+
+        assert calc_cache_key(foo, (1, 2), {}) == calc_cache_key(foo, (9, 2), {})
+        assert calc_cache_key(foo, (1, 2), {}) != calc_cache_key(foo, (1, 9), {})
+
+    def test_positional_and_keyword_arguments_match(self):
+        def foo(a, b):
+            pass
+
+        assert calc_cache_key(foo, (1, 2), {}) == calc_cache_key(
+            foo, (), {"a": 1, "b": 2}
+        )
+
+    def test_keyword_argument_order_is_significant(self):
+        # Inherited from Streamlit's key builder, which hashes keyword arguments in
+        # call order.
+        def foo(a, b):
+            pass
+
+        assert calc_cache_key(foo, (), {"a": 1, "b": 2}) != calc_cache_key(
+            foo, (), {"b": 2, "a": 1}
+        )
+
+
+@patch("streamlit_session_memo.session_memo.st")
+def test_st_session_memo_with_unhashable_arguments(st):
+    st.session_state = {}
+
+    spy = Mock()
+
+    @st_session_memo
+    def foo(config):
+        spy()
+        return config["name"]
+
+    # Each call builds an equal but distinct dict, as a rerun of a Streamlit script
+    # would.
+    assert [foo({"name": "a"}) for _ in range(3)] == ["a", "a", "a"]
+    spy.assert_called_once()
+
+
+def test_st_session_memo_preserves_function_metadata():
+    @st_session_memo
+    def foo(a, b):
+        """Docstring of foo."""
+
+    assert foo.__name__ == "foo"
+    assert foo.__doc__ == "Docstring of foo."
 
 
 @patch("streamlit_session_memo.session_memo.st")
