@@ -70,6 +70,16 @@ class TestCalcCacheKey:
             foo, (), {"a": 1, "b": 2}
         )
 
+    def test_keyword_argument_order_is_significant(self):
+        # Inherited from Streamlit's key builder, which hashes keyword arguments in
+        # call order.
+        def foo(a, b):
+            pass
+
+        assert calc_cache_key(foo, (), {"a": 1, "b": 2}) != calc_cache_key(
+            foo, (), {"b": 2, "a": 1}
+        )
+
 
 @patch("streamlit_session_memo.session_memo.st")
 def test_st_session_memo_with_unhashable_arguments(st):

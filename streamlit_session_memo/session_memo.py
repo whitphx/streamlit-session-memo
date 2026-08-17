@@ -34,18 +34,21 @@ def get_fully_qualified_name(func: Callable[..., Any]) -> str:
 def calc_cache_key(
     func: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any]
 ) -> str:
-    # The arguments are keyed by Streamlit's own key builder so that they are hashed
-    # exactly like `st.cache_data` and `st.cache_resource` hash theirs: by content, so
-    # that dicts and DataFrames key by value rather than by identity, skipping
-    # parameters whose name starts with an underscore, and raising
-    # `UnhashableParamError` for a type Streamlit cannot hash. It is a private API
-    # (`streamlit/runtime/caching/cache_utils.py`) whose signature took its current
-    # shape in Streamlit 1.25, the floor declared in `pyproject.toml`. The cache type
-    # only selects which decorator name that error message suggests.
-    # Streamlit annotates the parameter as `FunctionType`, but reads nothing off it
-    # that any callable lacks.
+    # `_make_value_key()` is the key builder behind `st.cache_data` and
+    # `st.cache_resource`, so arguments are hashed here exactly as those decorators
+    # hash theirs. It is a private API,
+    # https://github.com/streamlit/streamlit/blob/1.44.0/lib/streamlit/runtime/caching/cache_utils.py,
+    # whose signature took its current shape in Streamlit 1.25, the floor declared in
+    # `pyproject.toml`. The cache type only selects which decorator name the
+    # `UnhashableParamError` message suggests.
     value_key = _make_value_key(
-        CacheType.RESOURCE, cast("FunctionType", func), args, kwargs, None
+        CacheType.RESOURCE,
+        # Streamlit annotates this parameter as `FunctionType`, but only passes it to
+        # `inspect.signature()` and reads `__name__` off it in the error path.
+        cast("FunctionType", func),
+        args,
+        kwargs,
+        None,
     )
     return f"{CACHE_KEY_PREFIX}-{get_fully_qualified_name(func)}-{value_key}"
 
