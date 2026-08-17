@@ -63,9 +63,6 @@ jobs:
       with:
         python-version-file: "pyproject.toml"
 
-    - name: Install Python dependencies
-      run: uv sync --all-extras --dev
-
     - name: Package
       run: uv build
 
