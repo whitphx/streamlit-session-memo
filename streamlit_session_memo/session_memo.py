@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import functools
-import sys
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar, cast
 
 import streamlit as st
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import _make_value_key
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
     from types import FunctionType
