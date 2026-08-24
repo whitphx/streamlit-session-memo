@@ -2,7 +2,7 @@
 name = "streamlit-session-memo"
 description = ""
 authors = [{ name = "Yuichiro Tachibana (Tsuchiya)", email = "t.yic.yt@gmail.com" }]
-requires-python = ">=3.9,!=3.9.7"  # 3.9.7 is excluded due to https://github.com/streamlit/streamlit/pull/5168
+requires-python = ">=3.10"
 readme = "README.md"
 license = "MIT"
 dynamic = ["version"]
@@ -10,7 +10,6 @@ dependencies = [
     # 1.25.0 is the floor for `_make_value_key()`'s current signature, which
     # `calc_cache_key()` calls.
     "streamlit>=1.25.0",
-    "typing-extensions>=4.0.0; python_version < '3.10'",
 ]
 
 [dependency-groups]
