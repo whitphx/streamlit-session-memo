@@ -2,6 +2,13 @@
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-0.5.0'></a>
+## 0.5.0 — 2026-08-24
+
+### Removed
+
+- Dropped support for Python 3.9, which reached end of life. The minimum supported version is now 3.10, and the `typing-extensions` dependency it required is gone.
+
 <a id='changelog-0.4.2'></a>
 ## 0.4.2 — 2026-08-24
 
