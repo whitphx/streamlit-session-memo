@@ -19,7 +19,6 @@ dev = [
     "mypy[faster-cache]>=1.15.0",
     "pytest>=7.3.1,<8",
     "streamlit>=1.25.0",
-    "bump-my-version>=1.1.1",
     "pre-commit>=4.2.0",
 ]
 
@@ -32,3 +31,11 @@ source = "vcs"
 
 [tool.ruff.lint]
 extend-select = ["I"]
+
+[tool.scriv]
+categories = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security", "Chore"]
+format = "md"
+md_header_level = 2
+
+[tool.scriv-release]
+version_provider = "bump-my-version"
