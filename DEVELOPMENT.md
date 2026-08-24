@@ -19,7 +19,7 @@ Releases are automated by [`scriv-release`](https://github.com/whitphx/scriv-rel
    $ uvx scriv create --edit
    ```
    This writes a new file under `changelog.d/`. Fill in the relevant section (`### Added`, `### Fixed`, ...) and commit it with the PR.
-   The categories of the pending fragments decide the version bump: `Removed` is major, `Added` / `Changed` / `Deprecated` are minor, and the rest are patch. While the version is still `0.x`, a major bump is downshifted to a minor one.
+   The categories of the pending fragments decide the version bump, following [`scriv-release`'s default policy](https://github.com/whitphx/scriv-release/blob/main/docs/quickstart.md#3-configure-scriv-release).
 2. Once such a PR is merged, the workflow collects the pending fragments into `CHANGELOG.md` and opens a "Changelog Preview for Next Release" PR.
 3. Merging that PR creates and pushes the `v<version>` tag, which triggers the build, PyPI publish, and GitHub Release jobs in `main.yml`.
 

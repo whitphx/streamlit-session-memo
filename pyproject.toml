@@ -38,4 +38,7 @@ format = "md"
 md_header_level = 2
 
 [tool.scriv-release]
+# There is deliberately no [tool.bumpversion] section: with none configured,
+# bump-my-version reads the current version from the latest Git tag and edits no
+# files, which is what this hatch-vcs project wants. The tag is the only artifact.
 version_provider = "bump-my-version"
