@@ -2,6 +2,13 @@
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-0.4.2'></a>
+## 0.4.2 — 2026-08-24
+
+### Chore
+
+- GitHub Releases now carry the version's `CHANGELOG.md` entry as their release notes, instead of an empty body.
+
 <a id='changelog-0.4.1'></a>
 ## 0.4.1 — 2026-08-24
 
